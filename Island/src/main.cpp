@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "skybox.h"
 #include "resource_manager.h"
 #include "camera.h"
 #include "model.h"
@@ -19,6 +20,8 @@ Camera camera(glm::vec3(0.0f, 10.0f, 0.0f));
 // settings
 const GLuint SCR_WIDTH = 1280;
 const GLuint SCR_HEIGHT = 720;
+const float near = 0.1f;
+const float far = 750.0f;
 float deltaTime{ 0.0f };
 glm::vec2 terrainWaterSize = glm::vec2(750.0f);
 
@@ -48,10 +51,22 @@ int main() {
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
-    glfwWindowHint(GLFW_RESIZABLE, false);
+    //glfwWindowHint(GLFW_RESIZABLE, false);
 
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Island", nullptr, nullptr);
+    if (window == NULL)
+    {
+        std::cout << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
     glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+
+    // tell GLFW to capture our mouse
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // glad: load all OpenGL function pointers
     // ---------------------------------------
@@ -64,37 +79,38 @@ int main() {
     // Set Window
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetCursorPosCallback(window, mouse_callback);
-    glfwSetScrollCallback(window, scroll_callback);
-
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glEnable(GL_CULL_FACE);
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Display waiting information while program is loading up
-    // TODO
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    Shader loadingShader = ResourceManager::loadShader("shaders/post_processing.vs", "shaders/loading.fs", nullptr, "quad");
+    Texture2D loadingTexture = ResourceManager::loadTexture("resources/textures/LoadingPicture.png", true, "lensstar");
+    loadingShader.setInteger("loadingPicture", 0, GL_TRUE);
+    loadingTexture.bind(0);
+    Geometry::drawPlane();
+    glfwSwapBuffers(window);
 
     // Load Models
-    Model house("models/house/farmhouse.obj");
-    house.calculateBoundingVolume();
-    Model tree("models/tree3/laubbaum.obj");
-    tree.calculateBoundingVolume();
+    //Model house("models/house/farmhouse.obj");
+    //house.calculateBoundingVolume();
+    //Model tree("models/tree3/laubbaum.obj");
+    //tree.calculateBoundingVolume();
 
     // Load Shaders
-    // TODO
+    Shader shaderSkybox = ResourceManager::loadShader("shaders/skybox.vs", "shaders/skybox.fs", nullptr, "shaderSkybox");
 
     // Load Textures
-    //
 
     // Configure Texture Samplers
-    //
 
     // Terrain
-    Terrain terrain;
-    terrain.load(terrainWaterSize, 37.5f, 300.0f, "resources/textures/heightmap_island_low_poly.jpg");
-    camera.loadTerrain(&terrain);
+    //Terrain terrain;
+    //terrain.load(terrainWaterSize, 37.5f, 300.0f, "resources/textures/heightmap_island_low_poly.jpg");
+    //camera.loadTerrain(&terrain);
 
     // Water
 
@@ -103,10 +119,30 @@ int main() {
     // Houses
 
     // Skybox
+    Skybox skybox(&shaderSkybox);
+
+    skybox.loadDiurnalSkybox(
+        "resources/skybox/day/right.png",
+        "resources/skybox/day/left.png",
+        "resources/skybox/day/top.png",
+        "resources/skybox/day/bottom.png",
+        "resources/skybox/day/back.png",
+        "resources/skybox/day/front.png"
+    );
+
+    skybox.loadNocturnalSkybox(
+        "resources/skybox/night/right.png",
+        "resources/skybox/night/left.png",
+        "resources/skybox/night/top.png",
+        "resources/skybox/night/bottom.png",
+        "resources/skybox/night/back.png",
+        "resources/skybox/night/front.png"
+    );
 
     // Shadow framebuffer
 
     // Set Projection Matrix
+    glm::mat4 projection = camera.SetProjectionMatrix((float)SCR_WIDTH, (float)SCR_HEIGHT, near, far); // this remains unchanged for every frame
 
     // Sun
 
@@ -135,8 +171,23 @@ int main() {
         processInput(window);
 
         // configure view matrices
+        glm::mat4 view = camera.GetViewMatrix();
+        camera.CalculateViewFrustum();
+        glm::mat4 matProjectionView = projection * view;
 
         // cull trees that are out of frustum
+
+#pragma region NORMAL
+        ///////////////////////////////////////////////////////////
+        /////////////////////  NORMAL PASS  ///////////////////////
+        ///////////////////////////////////////////////////////////
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        /***********************Skybox*********************/
+        skybox.render(view, projection, 1.f);
+
+#pragma endregion NORMAL
 
         glfwSwapBuffers(window);
         glfwPollEvents();

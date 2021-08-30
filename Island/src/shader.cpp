@@ -13,8 +13,10 @@ Shader& Shader::use()
 void Shader::compile(const char* vertexSource, const char* fragmentSource, const char* geometrySource, std::string directory)
 {
     // First do a preprocessing stage (now used for #pragma include statements)
-    const char* vShaderSource = this->preProcess(vertexSource, directory);
-    const char* fShaderSource = this->preProcess(fShaderSource, directory);
+    std::string vShader = this->preProcess(vertexSource, directory);
+    std::string fShader = this->preProcess(fragmentSource, directory);
+    const GLchar* vShaderSource = vShader.c_str();
+    const GLchar* fShaderSource = fShader.c_str();
 
     unsigned int sVertex, sFragment, gShader;
     // vertex Shader
@@ -51,7 +53,7 @@ void Shader::compile(const char* vertexSource, const char* fragmentSource, const
         glDeleteShader(gShader);
 }
 
-const char* preProcess(const char* shaderSource, std::string directory)
+std::string Shader::preProcess(const char* shaderSource, std::string directory)
 {
     // Find occurences of #pragma include
     std::stringstream input(shaderSource);
@@ -75,7 +77,7 @@ const char* preProcess(const char* shaderSource, std::string directory)
             output << line << std::endl;
         }
     }
-    return output.str().c_str();
+    return output.str();
 }
 
 void Shader::setFloat(const char* name, float value, bool useShader)

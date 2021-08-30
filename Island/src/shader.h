@@ -18,7 +18,7 @@ public:
 	Shader& use();
 	// Compiles the shader from given source code
 	void compile(const char* vertexSource, const char* fragmentSource, const char* geometrySource = nullptr, std::string directory = "");
-	const char* preProcess(const char* shaderSource, std::string directory);
+	std::string preProcess(const char* shaderSource, std::string directory);
 	// utility functions
 	void setFloat(const char* name, float value, bool useShader = false);
 	void setInteger(const char* name, int value, bool useShader = false);

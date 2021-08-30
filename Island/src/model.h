@@ -48,13 +48,40 @@ public:
     // Calculates bounding volume
     void calculateBoundingVolume()
     {
-
+        glm::vec3 avr = glm::vec3(0.f);
+        float max_length{ 0.f };
+        glm::vec3 farthest = glm::vec3(0.f);
+        for (GLuint i = 0; i < this->Meshes.size(); i++)
+        {
+            glm::vec3 sum = glm::vec3(0.f);
+            for (GLuint j = 0; j < this->Meshes[i].vertices.size(); j++)
+            {
+                sum += this->Meshes[i].vertices[j].Position;
+                float this_length = glm::length(this->Meshes[i].vertices[j].Position);
+                if (this_length > max_length)
+                {
+                    max_length = this_length;
+                    farthest = this->Meshes[i].vertices[j].Position;
+                }
+            }
+            avr += sum / (float)this->Meshes[i].vertices.size();
+        }
+        m_center = avr / (float)this->Meshes.size();
+        m_radius = glm::length(farthest - m_center);
     }
 
     // Check if it requires frustum culling
     bool isInFrustum(Camera& camera, glm::mat4& model)
     {
-
+        glm::vec3 center = glm::vec3(model * glm::vec4(m_center, 1.f)); // 将中心变换到世界空间
+        float radius = 2.f * m_radius * model[0][0]; // Ensure the shadow can last a while when the object goes out of sight(frustum)
+        // Check if sphere touches any part of frustum
+        for (GLuint i = 0; i < 6; ++i)
+        {
+            if (camera.Frustum[i].Distance(center) < -radius) // 中心在透视头体每个面的外侧是负值（因为法线朝内），注意，比较的是-radius
+                return false;
+        }
+        return true; // 通过了透视头体每个面的检测
     }
 
 private:
@@ -217,7 +244,7 @@ private:
 };
 
 
-unsigned int TextureFromFile(const char* path, const std::string& directory, bool gamma)
+inline unsigned int TextureFromFile(const char* path, const std::string& directory)
 {
     std::string filename = std::string(path);
     filename = directory + '/' + filename;

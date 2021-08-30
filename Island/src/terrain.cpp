@@ -1,5 +1,7 @@
-#include "terrain.h"
 #include "stb_image.h"
+
+#include "terrain.h"
+
 
 Terrain::~Terrain()
 {
