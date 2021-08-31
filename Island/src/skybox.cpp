@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "stb_image.h"
+#include <SOIL.h>
 
 #include "skybox.h"
 
@@ -156,18 +156,16 @@ void Skybox::loadSkybox(
 		glBindTexture(GL_TEXTURE_CUBE_MAP, m_nocturnalTexID);
 	}
 
-	int width, height, nrChannels;
+	int width, height;
 	for (unsigned int i = 0; i < paths.size(); i++) {
-		unsigned char *data = stbi_load(paths[i].c_str(), &width, &height, &nrChannels, 0);
+		unsigned char* data = SOIL_load_image(paths[i].c_str(), &width, &height, 0, SOIL_LOAD_RGB);
 		if (data)
 		{
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_SRGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-			stbi_image_free(data);
 		}
 		else
 		{
 			std::cout << "Texture failed to load at path: " << paths[i].c_str() << std::endl;
-			stbi_image_free(data);
 		}
 	}
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

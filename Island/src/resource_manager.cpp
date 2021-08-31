@@ -2,7 +2,7 @@
 #include <sstream>
 #include <fstream>
 
-#include "stb_image.h"
+#include <SOIL.h>
 
 #include "resource_manager.h"
 
@@ -95,13 +95,12 @@ Texture2D ResourceManager::loadTextureFromFile(const char* file, bool alpha, boo
         texture.Internal_Format = gammaCorrection ? GL_SRGB_ALPHA : GL_RGBA;
         texture.Image_Format = GL_RGBA;
     }
-    // load image
-    int width, height, nrChannels;
-    // 它需要三个int作为它的第二、第三和第四个参数，stb_image.h将会用图像的宽度、高度和颜色通道的个数填充这三个变量。
-    unsigned char* data = stbi_load(file, &width, &height, &nrChannels, 0);
-    // now generate texture
-    texture.generate(width, height, data);
-    // and finally free image data
-    stbi_image_free(data);
+    // Load image
+    int width, height;
+    unsigned char* image = SOIL_load_image(file, &width, &height, 0, texture.Image_Format == GL_RGBA ? SOIL_LOAD_RGBA : SOIL_LOAD_RGB);
+    // Now generate texture
+    texture.generate(width, height, image);
+    // And finally free image data
+    SOIL_free_image_data(image);
     return texture;
 }

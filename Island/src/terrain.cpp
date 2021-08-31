@@ -1,4 +1,4 @@
-#include "stb_image.h"
+#include <SOIL.h>
 
 #include "terrain.h"
 
@@ -11,8 +11,7 @@ Terrain::~Terrain()
 }
 
 void Terrain::load(const glm::vec2& size, const float& heightScale, const float& textureScale, std::string HeightMapLoc) {
-    int nrChannels;
-    unsigned char* heightMap = stbi_load(HeightMapLoc.c_str(), &m_cols, &m_rows, &nrChannels, 1);
+    unsigned char* heightMap = SOIL_load_image(HeightMapLoc.c_str(), &m_cols, &m_rows, 0, SOIL_LOAD_L);
     generateMesh(size, heightScale, textureScale, m_cols, m_rows, heightMap);
     bufferUpdate();
 }
