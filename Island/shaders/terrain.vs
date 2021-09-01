@@ -29,7 +29,9 @@ void main()
     shadowFragPos = shadowFrag.xyz;
 
     if(isRefraction)
+    // 折射，水上不渲染
         gl_ClipDistance[0] = dot(vec4(aPos, 1.0), vec4(0.0, -1.0, 0.0, waterHeight + 4.0));
     if(isReflection)
+    // 反射，水下不渲染
         gl_ClipDistance[0] = dot(vec4(aPos, 1.0), vec4(0.0, 1.0, 0.0, -waterHeight + 0.6));
 }

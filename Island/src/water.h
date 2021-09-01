@@ -24,12 +24,12 @@ public:
 	glm::vec2 getSize() { return m_size; };
 
 	GLuint m_VAO, m_VBO, m_FBO, m_RBO;
+	Texture2D m_texRefraction, m_texReflection, m_dudvMap, m_normalMap;
 	Shader m_shader;
 
 private:
 	glm::vec2 m_size;
 	float m_height;
-	Texture2D m_texRefraction, m_texReflection, m_dudvMap, m_normalMap;
 	float m_scaleTex;
 
 	void init_data();

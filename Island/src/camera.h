@@ -95,7 +95,7 @@ public:
 		glm::vec3 imgPos = glm::vec3(Position.x, 2.f * waterHeight - Position.y, Position.z);
 		glm::vec3 imgFront = glm::vec3(Front.x, -Front.y, Front.z);
 		glm::vec3 imgUp = glm::vec3(Up.x, -Up.y, Up.z);
-		return glm::scale(glm::mat4(), glm::vec3(-1.0f, 1.0f, 1.0f)) * glm::lookAt(imgPos, imgPos + imgFront, imgUp);
+		return glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f)) * glm::lookAt(imgPos, imgPos + imgFront, imgUp);
 	}
 
 	// Sets the currently active projection matrix of the camera

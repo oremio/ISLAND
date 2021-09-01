@@ -57,6 +57,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void drawDebugPlane(GLuint textureID);
 
 bool cursorFlag{ false };
 
@@ -168,6 +169,10 @@ int main() {
     // Shadow framebuffer
     GLuint const SHADOW_RESOLUTION = 4096; //8192;//
     GLuint ShadowFBO;
+
+    glGenFramebuffers(1, &ShadowFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, ShadowFBO);
+
     Texture2D shadowDepth;
     shadowDepth.Image_Format = GL_DEPTH_COMPONENT;
     shadowDepth.Internal_Format = GL_DEPTH_COMPONENT;
@@ -179,8 +184,7 @@ int main() {
     shadowDepth.bind();
     float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-    glGenFramebuffers(1, &ShadowFBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, ShadowFBO);
+
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowDepth.ID, 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::SHADOW_FRAMEBUFFER" << std::endl;
@@ -257,7 +261,7 @@ int main() {
         /***********************Terrain*********************/
         SimpleShader.use();
         SimpleShader.setMatrix4("lightMatrix", lightMatrix);
-        SimpleShader.setMatrix4("model", glm::mat4());
+        SimpleShader.setMatrix4("model", glm::mat4(1.0f));
         terrain.render();
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -297,6 +301,7 @@ int main() {
         glm::mat4 imgView = camera.GetImaginaryViewMatrix(water.getHeight());
 
         water.initPassReflection();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         /**********************Terrain********************/
         shaderTerrain.setMatrix4("view", imgView, GL_TRUE);
@@ -360,6 +365,7 @@ int main() {
 
         /***********************Skybox*********************/
         skybox.render(view, projection, 1.f);
+        drawDebugPlane(shadowDepth.ID);
 
 #pragma endregion NORMAL
 
@@ -422,4 +428,45 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(yoffset);
 }
+
+GLuint vaoDebugTexturedRect = 0;
+void drawDebugPlane(GLuint textureID)
+{
+    // Initialize (if necessery)
+    if (vaoDebugTexturedRect == 0)
+    {
+        GLfloat vertices[] = {
+            // Positions   // TexCoords
+             0.5f,  0.5f,  0.0f,  0.0f,
+             1.0f,  0.5f,  1.0f,  0.0f,
+             0.5f,  1.0f,  0.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,  1.0f,
+        };
+        GLuint VBO;
+        glGenVertexArrays(1, &vaoDebugTexturedRect);
+        glGenBuffers(1, &VBO);
+        // Fill buffer
+        glBindVertexArray(vaoDebugTexturedRect);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        // Link vertex attributes
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)(2 * sizeof(GLfloat)));
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
+    Shader debugShader = ResourceManager::loadShader("shaders/debug.vs", "shaders/debug.fs", nullptr, "debugQuad");
+    debugShader.setInteger("fboAttachment", 0, true);
+
+    // Render debug plane
+    glBindVertexArray(vaoDebugTexturedRect);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+}
+
 //#endif
