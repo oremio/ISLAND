@@ -25,11 +25,18 @@ Camera camera(glm::vec3(0.0f, 10.0f, 0.0f));
 // settings
 const GLuint SCR_WIDTH = 1280;
 const GLuint SCR_HEIGHT = 720;
+
 const float near = 0.1f;
 const float far = 750.0f;
+
 float deltaTime{ 0.0f };
+
 glm::vec2 terrainWaterSize = glm::vec2(750.0f);
 float waterHeight = 2.f;
+
+const GLuint NR_TREES = 250;
+const GLfloat TREE_SCALE = 2.0f;
+const GLfloat HOUSE_SCALE = 0.7f;
 
 //camera data for generating view matrix
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
@@ -113,24 +120,43 @@ int main() {
     glfwSwapBuffers(window);
 
     // Load Models
-    //Model house("models/house/farmhouse.obj");
-    //house.calculateBoundingVolume();
-    //Model tree("models/tree3/laubbaum.obj");
-    //tree.calculateBoundingVolume();
+    Model house("models/house/farmhouse.obj");
+    house.calculateBoundingVolume();
+    Model tree("models/tree3/laubbaum.obj");
+    tree.calculateBoundingVolume();
 
     // Load Shaders
     Shader shaderSkybox = ResourceManager::loadShader("shaders/skybox.vs", "shaders/skybox.fs", nullptr, "shaderSkybox");
     Shader shaderTerrain = ResourceManager::loadShader("shaders/terrain.vs", "shaders/terrain.fs", nullptr, "shaderTerrain");
+    Shader shaderHouse = ResourceManager::loadShader("shaders/house.vs", "shaders/house.fs", nullptr, "shaderHouse");
     Shader SimpleShader = ResourceManager::loadShader("shaders/simple.vs", "shaders/simple.fs", nullptr, "SimpleShader");
-    //Shader sunShader = ResourceManager::loadShader("shaders/sun.vs", "shaders/sun.fs", nullptr, "quad");
+    Shader treeShader = ResourceManager::loadShader("shaders/tree.vs", "shaders/tree.fs", nullptr, "treeShader");
+    Shader treeSimpleShader = ResourceManager::loadShader("shaders/simple_tree.vs", "shaders/simple_tree.fs", nullptr, "treeSimpleShader");
+    Shader sunShader = ResourceManager::loadShader("shaders/sun.vs", "shaders/sun.fs", nullptr, "quad");
+    Shader volumetricShader = ResourceManager::loadShader("shaders/post_processing.vs", "shaders/volumetric_lighting.fs", nullptr, "quad");
+    Shader gaussianBlurShader = ResourceManager::loadShader("shaders/post_processing.vs", "shaders/gaussian_blur.fs", nullptr, "quad");
+    Shader applyPostProcessShader = ResourceManager::loadShader("shaders/post_processing.vs", "shaders/applyPostProcess.fs", nullptr, "quad");
+
 
     // Load Textures
     Texture2D textureTerrain = ResourceManager::loadTexture("resources/textures/grass_COLOR.png", false, "textureTerrain");
     Texture2D SunTexture = ResourceManager::loadTexture("resources/textures/sun.png", true, "lensstar");
 
     // Configure Texture Samplers
-    shaderTerrain.setInteger("terrain", 0, true);
-    shaderTerrain.setInteger("shadowMap", 1);
+	shaderTerrain.setInteger("terrain", 0, true);
+	shaderTerrain.setInteger("shadowMap", 1);
+	shaderHouse.setInteger("material.texture_diffuse1", 0, true);
+	shaderHouse.setInteger("material.texture_specular1", 1);
+	shaderHouse.setInteger("material.texture_normal1", 2);
+	shaderHouse.setInteger("lightDepthTexture", 3);
+	shaderHouse.setFloat("material.shininess", 16.0f);
+	treeShader.setInteger("texturez", 0, true);
+	treeShader.setInteger("shadowMap", 3);
+    sunShader.setInteger("billboard", 0, true);
+	volumetricShader.setInteger("scene", 0, true);
+	gaussianBlurShader.setInteger("image", 0, true);
+	applyPostProcessShader.setInteger("scene", 0, true);
+	applyPostProcessShader.setInteger("normalScene", 1);
 
     // Terrain
     Terrain terrain;
@@ -142,8 +168,35 @@ int main() {
     water.load("resources/textures/water_dudv_blur.jpg", "resources/textures/water_normal.jpg", 100.f);
 
     // Trees
+    srand(2348);
+    std::vector<glm::mat4> trees;
+    for (GLuint i = 0; i < NR_TREES; i++) {
+        GLint x = rand() % (int)terrain.getSize().x - terrain.getSize().x * 0.5f;
+        GLint z = rand() % (int)terrain.getSize().y - terrain.getSize().y * 0.5f;
+        float y = terrain.getHeight(x, z);
+        if (y < water.getHeight() + 0.5f)
+            continue;
+        glm::mat4 model(1.f);
+        GLfloat scale = TREE_SCALE + ((rand() % 25) - 7.5) / 10.0f;
+        model = glm::translate(model, glm::vec3(x, y - 0.05 * scale, z));
+        model = glm::scale(model, glm::vec3(scale));
+        trees.push_back(model);
+    }
 
     // Houses
+    std::vector<glm::vec3> houseLocs;
+    houseLocs.push_back(glm::vec3(-200, terrain.getHeight(-200, 80), 80));
+    houseLocs.push_back(glm::vec3(-225, terrain.getHeight(-225, 50), 50));
+    houseLocs.push_back(glm::vec3(-226, terrain.getHeight(-226, 135), 135));
+    houseLocs.push_back(glm::vec3(-23, terrain.getHeight(-23, 172), 172));
+    houseLocs.push_back(glm::vec3(260.0f, terrain.getHeight(260.0f, 15.0f), 15.0f));
+    std::vector<glm::mat4> housesModels;
+    for (GLuint i = 0; i < houseLocs.size(); i++) {
+        glm::mat4 model(1.f);
+        model = glm::translate(model, houseLocs[i]);
+        model = glm::scale(model, glm::vec3(HOUSE_SCALE));
+        housesModels.push_back(model);
+    }
 
     // Skybox
     Skybox skybox(&shaderSkybox);
@@ -194,22 +247,66 @@ int main() {
     glm::mat4 projection = camera.SetProjectionMatrix((float)SCR_WIDTH, (float)SCR_HEIGHT, near, far); // this remains unchanged for every frame
     shaderTerrain.setMatrix4("projection", projection, true);
     water.m_shader.setMatrix4("projection", projection, true);
-    //sunShader.setMatrix4("projection", projection, true);
+    shaderHouse.setMatrix4("projection", projection, true);
+    treeShader.setMatrix4("projection", projection, true);
+    sunShader.setMatrix4("projection", projection, true);
 
     // Sun
     Light sun(lightDir, lightColor, ambientStrength, ambientColor);
+    sun.setShader(shaderHouse, "sun", true);
     sun.setShader(shaderTerrain, "sun", true);
     sun.setShader(water.m_shader, "sun", true);
+    sun.setShader(treeShader, "sun", true);
 
     // Fog
     Fog fog(fogDensity, fogColor1);
     fog.setShader(shaderTerrain, "fog", true);
     fog.setShader(water.m_shader, "fog", true);
+    fog.setShader(shaderHouse, "fog", true);
+    fog.setShader(treeShader, "fog", true);
     fog.setShader(shaderSkybox, "fog", true);
 
     // Trees - Instanced array
+    GLuint VBO_Trees;
+    glGenBuffers(1, &VBO_Trees);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_Trees);
+    glBufferData(GL_ARRAY_BUFFER, trees.size() * sizeof(glm::mat4), NULL, GL_STREAM_DRAW);
+    for (GLuint i = 0; i < tree.Meshes.size(); i++) {
+        glBindVertexArray(tree.Meshes[i].VAO);
+
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (GLvoid*)0);
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (GLvoid*)(sizeof(glm::vec4)));
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (GLvoid*)(2 * sizeof(glm::vec4)));
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (GLvoid*)(3 * sizeof(glm::vec4)));
+
+        glVertexAttribDivisor(3, 1);
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
+    }
 
     // Render to Texture
+    Framebuffer intermediateFramebuffer(SCR_WIDTH, SCR_HEIGHT);
+    Framebuffer normalFramebuffer(SCR_WIDTH, SCR_HEIGHT);
+    Framebuffer volumetricFBO(SCR_WIDTH, SCR_HEIGHT);
+    Texture2D buffer1, buffer2; // Buffers used for ping-ponging between color attachments for Gaussian blur
+    buffer1.Internal_Format = GL_RGB16F;
+    buffer1.Filter_Min = GL_LINEAR; buffer1.Mipmap = GL_FALSE;
+    buffer1.Wrap_S = GL_CLAMP_TO_EDGE; buffer1.Wrap_T = GL_CLAMP_TO_EDGE;
+    buffer1.generate(SCR_WIDTH, SCR_HEIGHT, NULL);
+
+    buffer2.Internal_Format = GL_RGB16F;
+    buffer2.Filter_Min = GL_LINEAR; buffer2.Mipmap = GL_FALSE;
+    buffer2.Wrap_S = GL_CLAMP_TO_EDGE; buffer2.Wrap_T = GL_CLAMP_TO_EDGE;
+    buffer2.generate(SCR_WIDTH, SCR_HEIGHT, NULL);
+
+    volumetricFBO.ColorBuffer.bind();
+    volumetricFBO.ColorBuffer.Wrap_S = GL_CLAMP_TO_EDGE; // Clamp to edge so values do not leak into other sides of texture
+    volumetricFBO.ColorBuffer.Wrap_T = GL_CLAMP_TO_EDGE;
 
     // deltaTime variables
     float lastTime{ 0.0f };
@@ -235,6 +332,15 @@ int main() {
         glm::mat4 matProjectionView = projection * view;
 
         // cull trees that are out of frustum
+        std::vector<glm::mat4> treeModels;
+        for (GLuint i = 0; i < trees.size(); i++) {
+            if (tree.isInFrustum(camera, trees[i]))
+                treeModels.push_back(trees[i]);
+        }
+        if (treeModels.size() > 0) {
+            glBindBuffer(GL_ARRAY_BUFFER, VBO_Trees);
+            glBufferSubData(GL_ARRAY_BUFFER, 0, treeModels.size() * sizeof(glm::mat4), &treeModels[0]);
+        }
 
 #pragma region SHADOW
         /////////////////////////////////////////////////////////
@@ -249,8 +355,8 @@ int main() {
         GLfloat orthoWidth = 150.0f;
         glm::mat4 lightProjection = glm::ortho(-orthoWidth, orthoWidth, -orthoWidth, orthoWidth, 25.0f, 350.0f);
         glm::mat4 lightView = glm::lookAt(sun.m_direction * 250.f + glm::vec3(camera.Position.x, 0.0f, camera.Position.z),
-                                        glm::vec3(0.0f) + glm::vec3(camera.Position.x, 0.0f, camera.Position.z),
-                                        glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::vec3(0.0f) + glm::vec3(camera.Position.x, 0.0f, camera.Position.z),
+            glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 biasMatrix = glm::mat4();
         biasMatrix[0][0] = 0.5; biasMatrix[0][1] = 0.0; biasMatrix[0][2] = 0.0; biasMatrix[0][3] = 0.0;
         biasMatrix[1][0] = 0.0; biasMatrix[1][1] = 0.5; biasMatrix[1][2] = 0.0; biasMatrix[1][3] = 0.0;
@@ -263,6 +369,27 @@ int main() {
         SimpleShader.setMatrix4("lightMatrix", lightMatrix);
         SimpleShader.setMatrix4("model", glm::mat4(1.0f));
         terrain.render();
+
+        /***********************Houses*********************/
+        for (GLuint i = 0; i < housesModels.size(); i++) {
+            SimpleShader.setMatrix4("model", housesModels[i]);
+            house.Draw(SimpleShader);
+        }
+
+        /***********************Trees*********************/
+        if (treeModels.size() > 0) {
+            glDisable(GL_CULL_FACE);
+            treeSimpleShader.use();
+            treeSimpleShader.setMatrix4("lightMatrix", lightMatrix);
+            treeSimpleShader.setFloat("time", glfwGetTime());
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, tree.Meshes[0].textures[0].id);
+            for (GLuint i = 0; i < tree.Meshes.size(); i++) {
+                glBindVertexArray(tree.Meshes[i].VAO);
+                glDrawElementsInstanced(GL_TRIANGLES, tree.Meshes[i].indices.size(), GL_UNSIGNED_INT, 0, treeModels.size());
+            }
+            glEnable(GL_CULL_FACE);
+        }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
@@ -301,7 +428,6 @@ int main() {
         glm::mat4 imgView = camera.GetImaginaryViewMatrix(water.getHeight());
 
         water.initPassReflection();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         /**********************Terrain********************/
         shaderTerrain.setMatrix4("view", imgView, GL_TRUE);
@@ -314,6 +440,25 @@ int main() {
         shadowDepth.bind(1);
         terrain.render();
 
+        /**********************Trees********************/
+        if (treeModels.size() > 0)
+        {
+            glDisable(GL_CULL_FACE);
+            treeShader.setMatrix4("view", imgView, GL_TRUE);
+            treeShader.setVector3f("viewPos", camera.Position);
+            treeShader.setFloat("time", glfwGetTime());
+            treeShader.setMatrix4("shadowMat", lightMatrix);
+            shadowDepth.bind(3);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, tree.Meshes[0].textures[0].id);
+            for (GLuint i = 0; i < tree.Meshes.size(); ++i)
+            {
+                glBindVertexArray(tree.Meshes[i].VAO);
+                glDrawElementsInstanced(GL_TRIANGLES, tree.Meshes[i].indices.size(), GL_UNSIGNED_INT, 0, treeModels.size());
+            }
+            glEnable(GL_CULL_FACE);
+        }
+
         /***********************Skybox*********************/
         skybox.render(imgView, projection, 1.f);
 
@@ -321,7 +466,6 @@ int main() {
 
 #pragma endregion REFLECTION
 
-        /*
         // Check if the sun is in our sight. If not, skip GOD RAYS pass and POST PROCESSING pass.
         glm::vec4 position = projection * glm::mat4(glm::mat3(view)) * glm::vec4(sun.m_direction * 250.f, 1.f);
         float zValue = position.z;
@@ -332,20 +476,80 @@ int main() {
         const float margin = 0.05f;
         if (zValue < 0.f || sunPos.x < 0.f - margin || sunPos.x > 1.f + margin || sunPos.y < 0.f - margin || sunPos.y > 1.f + margin)//the interval should be slightly larger than [0, 1], otherwise when the sun appear from the edges of the screen it looks bad
             doGodRays = false;
-        */
 
 #pragma region GOD_RAYS
         ///////////////////////////////////////////////////////////
         ///////////////////////  GOD RAYS  ////////////////////////
         ///////////////////////////////////////////////////////////
+
+        if (doGodRays)
+        {
+            intermediateFramebuffer.beginRender();
+
+            SimpleShader.use();
+            SimpleShader.setMatrix4("lightMatrix", matProjectionView);
+
+            /***********************Houses*********************/
+            for (GLuint i = 0; i < housesModels.size(); i++)
+            {
+                if (house.isInFrustum(camera, housesModels[i]))
+                {
+                    SimpleShader.setMatrix4("model", housesModels[i]);
+                    house.Draw(SimpleShader);
+                }
+            }
+
+            /**********************Terrain********************/
+            SimpleShader.setMatrix4("model", glm::mat4(1.f));
+            terrain.render();
+
+            /***********************Water*********************/
+            glm::mat4 model(1.f);
+            model = glm::translate(model, glm::vec3(0.0f, water.getHeight(), 0.0f));
+            model = glm::scale(model, glm::vec3(water.getSize().x, 1.0f, water.getSize().y));
+            SimpleShader.setMatrix4("model", model);
+            glBindVertexArray(water.m_VAO);
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+            /**********************Trees********************/
+            if (treeModels.size() > 0)
+            {
+                glDisable(GL_CULL_FACE);
+                treeSimpleShader.use();
+                treeSimpleShader.setMatrix4("lightMatrix", matProjectionView);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, tree.Meshes[0].textures[0].id);
+                for (GLuint i = 0; i < tree.Meshes.size(); ++i)
+                {
+                    glBindVertexArray(tree.Meshes[i].VAO);
+                    glDrawElementsInstanced(GL_TRIANGLES, tree.Meshes[i].indices.size(), GL_UNSIGNED_INT, 0, treeModels.size());
+                }
+                glEnable(GL_CULL_FACE);
+            }
+
+            /***********************Sun*********************/
+            sunShader.use();
+            sunShader.setMatrix4("view", glm::mat4(glm::mat3(view)));// when player walks forward the sun won't be left behind, so to keep the sun around the player, don't translate
+            sunShader.setVector3f("sunPos", sun.m_direction * 250.f);// check here when the sun quad is too big // debug
+            SunTexture.bind(0);
+            Geometry::drawPlane();
+
+            intermediateFramebuffer.endRender();
+        }
+
 #pragma endregion GOD_RAYS
 
 #pragma region NORMAL
         ///////////////////////////////////////////////////////////
         /////////////////////  NORMAL PASS  ///////////////////////
         ///////////////////////////////////////////////////////////
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        if (doGodRays)
+            normalFramebuffer.beginRender();
+        else {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        }
 
         /**********************Terrain********************/
         shaderTerrain.setMatrix4("view", view, GL_TRUE);
@@ -363,12 +567,100 @@ int main() {
         water.m_shader.setVector3f("viewPos", camera.Position);
         water.render();
 
+        /***********************Houses*********************/
+        shaderHouse.setMatrix4("view", view, GL_TRUE);
+        shaderHouse.setVector3f("viewPos", camera.Position);
+        for (GLuint i = 0; i < housesModels.size(); i++) {
+            if (house.isInFrustum(camera, housesModels[i])) {
+                shaderHouse.setMatrix4("model", housesModels[i]);
+                house.Draw(shaderHouse);
+            }
+        }
+
+        /**********************Trees********************/
+        if (treeModels.size() > 0)
+        {
+            glDisable(GL_CULL_FACE);
+            treeShader.setMatrix4("view", view, GL_TRUE);
+            treeShader.setVector3f("viewPos", camera.Position);
+            treeShader.setFloat("time", glfwGetTime());
+            treeShader.setMatrix4("shadowMat", lightMatrix);
+            shadowDepth.bind(3);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, tree.Meshes[0].textures[0].id);
+            for (GLuint i = 0; i < tree.Meshes.size(); ++i)
+            {
+                glBindVertexArray(tree.Meshes[i].VAO);
+                glDrawElementsInstanced(GL_TRIANGLES, tree.Meshes[i].indices.size(), GL_UNSIGNED_INT, 0, treeModels.size());
+            }
+            glEnable(GL_CULL_FACE);
+        }
+
         /***********************Skybox*********************/
         skybox.render(view, projection, 1.f);
-        drawDebugPlane(shadowDepth.ID);
+
+        if (doGodRays)
+            normalFramebuffer.endRender();
 
 #pragma endregion NORMAL
 
+#pragma region POST_PROCESSING
+        ///////////////////////////////////////////////////////////
+        ////////////////////  POST PROCESSING  ////////////////////
+        ///////////////////////////////////////////////////////////
+
+        if (doGodRays)
+        {
+            glDisable(GL_DEPTH_TEST);
+
+            volumetricFBO.beginRender();
+
+            volumetricShader.setVector2f("sunPos", sunPos, true);
+
+            volumetricShader.use();
+            intermediateFramebuffer.ColorBuffer.bind(0);
+            Geometry::drawPlane();
+
+            volumetricFBO.endRender();
+
+            // Gaussian blur
+            int blur_iterations = 4;
+            buffer1 = volumetricFBO.ColorBuffer;
+            volumetricFBO.bind();
+            volumetricFBO.updateColorBufferTexture(buffer2);
+            gaussianBlurShader.use();
+            volumetricFBO.beginRender();
+            for (int i = 0; i < blur_iterations; i++) {
+                for (int n = 0; n < 2; n++) {
+                    // Horizontal or vertical based on n
+                    gaussianBlurShader.setInteger("horizontal", n == 0 ? 1 : 0);
+                    // 水平则将buffer1后处理并渲染到buffer2
+                    // 竖直则将buffer2后处理并渲染到buffer1
+                    // 最后输出buffer1
+                    volumetricFBO.updateColorBufferTexture(n == 0 ? buffer2 : buffer1);
+                    if (n == 0)
+                        buffer1.bind(0);
+                    else
+                        buffer2.bind(0);
+                    Geometry::drawPlane();
+                }
+            }
+            volumetricFBO.endRender();
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            applyPostProcessShader.use();
+            volumetricFBO.ColorBuffer.bind(0);
+            normalFramebuffer.ColorBuffer.bind(1);
+            Geometry::drawPlane();
+
+            glEnable(GL_DEPTH_TEST);
+        }
+
+#pragma endregion POST_PROCESSING
+
+        drawDebugPlane(water.m_texReflection.ID);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

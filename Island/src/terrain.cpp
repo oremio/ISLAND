@@ -65,7 +65,8 @@ float Terrain::getHeight(const float& worldX, const float& worldZ) {
     return height;
 }
 
-void Terrain::generateMesh(const glm::vec2& size, const float& heightScale, const float& textureScale, const int& cols, const int& rows, unsigned char* heightMap) {
+void Terrain::generateMesh(const glm::vec2& size, const float& heightScale,
+    const float& textureScale, const int& cols, const int& rows, unsigned char* heightMap) {
     m_size = size;
 
     /************************** Generate Vertices and TexCoords ************************/

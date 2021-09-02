@@ -1,0 +1,179 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{d364a165-8d3c-43a9-84cb-01d037f7f673}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\glad.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shader.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\texture.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\resource_manager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\terrain.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\skybox.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\water.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fog.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\light.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\shader.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\texture.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\resource_manager.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\terrain.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\camera.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mesh.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\model.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\framebuffer.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\geometry.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\water.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\skybox.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fog.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\light.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\stb_image.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\post_processing.vs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\loading.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\skybox.vs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\skybox.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\water.vs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\water.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\fog.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\simple.vs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\simple.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\light.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\terrain.vs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\terrain.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\debug.vs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\debug.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\water_debug.vs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\water_debug.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\simple_tree.vs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\simple_tree.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\tree.vs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\tree.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\house.vs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\house.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\sun.vs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\sun.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\volumetric_lighting.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\applyPostProcess.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\gaussian_blur.fs">
+      <Filter>shaders</Filter>
+    </None>
+  </ItemGroup>
+</Project>

@@ -51,6 +51,7 @@ void main()
     float fresnel = viewDir.y;// i.e. viewDir.y = dot(vec3(0.0, 1.0, 0.0), viewDir)
     vec3 specular = spec * sun.lightColor;
 
+    // 当你垂直看向水面，那就基本没有反射，fresnel→1；当你用掠射角看向水面，那就全是反射，fresnel→0！
     vec3 color = mix((reflectColor + specular), refractColor, fresnel);
 
     float fogFactor = getFogFactor(fog, viewPos, worldFragPos);
