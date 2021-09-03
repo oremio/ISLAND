@@ -1,5 +1,7 @@
 一个基于OpenGL的完整渲染场景。
 
+OpenGL版本：3.3
+
 使用库：
 
 - glfw-3.3.4
@@ -7,6 +9,8 @@
 - assimp-3.3.1
 - SOIL
 - 编译环境：Windows 10 家庭中文版 19043.1165 + Microsoft Visual Studio Community 2019 版本 16.5.4
+
+硬件配置： CPU: Intel Core i5-8400；GPU：NVIDIA GeForce GTX 1050 Ti；
 
 具体实现效果（右上角为对应帧缓冲）：
 
